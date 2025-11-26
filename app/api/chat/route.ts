@@ -11,95 +11,54 @@ type ChatMessage = {
   content: string;
 };
 
-// Detect if the assistant is asking a follow-up question
-function isQuestionTurn(text: string) {
-  return /first question|second question|third question|next question|let's continue/i.test(
-    text
-  );
-}
-
-// Detect when assistant wants to auto-continue
-function wantsAutoContinue(text: string) {
-  return /give me a moment|processing|hold on|one sec|let me think/i.test(text);
-}
-
 export async function POST(req: Request) {
   const body = await req.json();
-  const history: ChatMessage[] = body.history || [];
-  const latestUserContent =
-    history.length > 0 ? history[history.length - 1].content : body.message;
 
-  // 🔥 STEP 1 — FETCH LAST ASSISTANT TURN
-  const lastAssistant = history
-    .filter((m) => m.role === "assistant")
-    .slice(-1)[0];
+  // Full history
+  const history: ChatMessage[] = body.history ?? [];
 
-  const assistantText = lastAssistant?.content || "";
+  // Latest user message
+  const latestUserContent: string = body.message;
 
-  // 🔥 STEP 2 — AUTO-CONTINUE LOGIC (NO USER INPUT REQUIRED)
-  if (assistantText && wantsAutoContinue(assistantText)) {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      temperature: 0.3,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...history,
-      ],
-    });
+  // RAG + Web Search only for latest user query
+  const rag = await runRAG(latestUserContent);
+  const web = await exaSearch(latestUserContent);
 
-    return NextResponse.json({
-      role: "assistant",
-      content: completion.choices[0].message?.content || "Continuing...",
-    });
-  }
-
-  // 🔥 STEP 3 — DO RAG + SEARCH ONLY ON USER SUBSCRIPTION LIST (NOT ON EVERY TURN)
-  let rag: any = null;
-  let web: any = null;
-
-  const userJustListedSubs =
-    /netflix|spotify|notion|premium|subscription|₹|\$|mo|month/i.test(
-      latestUserContent
-    ) && history.length < 3;
-
-  if (userJustListedSubs) {
-    rag = await runRAG(latestUserContent);
-    web = await exaSearch(latestUserContent);
-  }
-
-  const context = `RAG RESULTS:
+  const context = `
+RAG RESULTS:
 ${JSON.stringify(rag, null, 2)}
 
 WEB SEARCH RESULTS:
 ${JSON.stringify(web, null, 2)}
 `;
 
-  // 🔥 STEP 4 — BUILD FULL MESSAGE ARRAY
+  // Message array
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: context },
   ];
 
-  if (userJustListedSubs) {
-    messages.push({ role: "system", content: context });
-  }
-
-  for (const m of history) {
+  // Add history properly
+  history.forEach((m) =>
     messages.push({
       role: m.role,
       content: m.content,
-    });
-  }
+    })
+  );
 
-  // 🔥 STEP 5 — FORCE 1 QUESTION AT A TIME
-  if (assistantText && isQuestionTurn(assistantText)) {
+  // Add the latest user turn
+  messages.push({ role: "user", content: latestUserContent });
+
+  // Detect auto-continue
+  const lastAssistant = history.filter((m) => m.role === "assistant").pop();
+  if (lastAssistant && lastAssistant.content.includes("Give me a moment")) {
     messages.push({
-      role: "assistant",
+      role: "system",
       content:
-        "Please answer the previous question so we can continue with the evaluation.",
+        "You previously said 'Give me a moment' — now continue Phase 2 analysis immediately.",
     });
   }
 
-  // 🔥 STEP 6 — CALL OPENAI
   const completion = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
     temperature: 0.3,
