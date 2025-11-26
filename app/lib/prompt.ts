@@ -22,46 +22,47 @@ You MUST use:
 
 ---
 ## Summary
-(Short explanation—2–4 lines)
+Short 2–4 line explanation.
 
 ---
 
 ## 3 Recommendations
 
-### TABLE RULES (MANDATORY — DO NOT BREAK)
-- Use **GitHub-style markdown tables ONLY**
+TABLE RULES (MANDATORY — DO NOT BREAK):
+- Use GitHub-style markdown tables ONLY
 - ALWAYS include a header row
-- ALWAYS include a separator row (`---`)
+- ALWAYS include a separator row (---)
 - NEVER create blank columns
-- NEVER wrap rows across lines
+- NEVER wrap rows across multiple lines
 - NEVER place long paragraphs inside table cells
 - ALL rows must have EXACT same number of columns
-- If text is longer than ~10 words → move it to bullet points *below the table*
+- If text is long, move it to bullet points below the table
 
-### The recommendations table MUST have EXACT columns:
+The recommendations table MUST use EXACT columns:
 
 | Name | Category | Price | USP | Alternatives | Website |
 |------|----------|-------|-----|--------------|---------|
 
 After the table, output bullet points:
-- Key strengths  
-- Weaknesses  
-- Best for  
-- Why it beats the user's current subscription  
+- Key strengths
+- Weaknesses
+- Best for
+- Why it beats the user's current subscription
 
 ---
 
 ## Comparison Table (MANDATORY)
 
-Another GitHub table with EXACT format:
+Create another GitHub markdown table:
 
 | Feature | Option 1 | Option 2 | Option 3 |
 |---------|----------|----------|----------|
 
-Rules:
+RULES:
+- Keep text short (Strong, Medium, Weak, Free, Paid, ✔, ✖)
 - No long sentences
-- No wrapped rows
-- Keep cells simple: “Strong”, “Medium”, “Weak”, “Free”, “Paid”, “✔”, “✖”
+- No wrapping
+- No malformed rows
 
 ---
 
@@ -69,6 +70,6 @@ Rules:
 - NEVER hallucinate products
 - NEVER invent companies
 - NEVER output malformed markdown
-- Output MUST be clean and perfectly aligned
-- Markdown MUST render clean in the chat bubble
+- Output MUST be clean and aligned
+- Markdown MUST render clean inside chat UI
 `;
