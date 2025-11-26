@@ -3,9 +3,10 @@ import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-// @ts-ignore – Pinecone client works with apiKey only; ignore TS complaining
+// @ts-ignore – ignore TS config type noise, runtime config below is correct
 const pc = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!,
+  environment: process.env.PINECONE_ENVIRONMENT!,
 });
 
 export async function runRAG(query: string) {
@@ -16,7 +17,6 @@ export async function runRAG(query: string) {
     });
 
     const vector = emb.data[0].embedding;
-
     const index = pc.index("subscriptions");
 
     const result = await index.query({
