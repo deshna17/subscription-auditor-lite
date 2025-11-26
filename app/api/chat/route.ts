@@ -7,84 +7,106 @@ import { exaSearch } from "../../lib/search";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 type ChatMessage = {
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant";
   content: string;
-  phase?: "phase0" | "phase1" | "phase2";
 };
+
+// Detect if the assistant is asking a follow-up question
+function isQuestionTurn(text: string) {
+  return /first question|second question|third question|next question|let's continue/i.test(
+    text
+  );
+}
+
+// Detect when assistant wants to auto-continue
+function wantsAutoContinue(text: string) {
+  return /give me a moment|processing|hold on|one sec|let me think/i.test(text);
+}
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const messagesFromClient: ChatMessage[] = body.messages || [];
+  const history: ChatMessage[] = body.history || [];
+  const latestUserContent =
+    history.length > 0 ? history[history.length - 1].content : body.message;
 
-  // If no chat history → PHASE 0
-  let currentPhase: "phase0" | "phase1" | "phase2" = "phase0";
+  // 🔥 STEP 1 — FETCH LAST ASSISTANT TURN
+  const lastAssistant = history
+    .filter((m) => m.role === "assistant")
+    .slice(-1)[0];
 
-  const lastUser = [...messagesFromClient].reverse().find((m) => m.role === "user");
+  const assistantText = lastAssistant?.content || "";
 
-  // Detect if subs were listed
-  const subsListed = messagesFromClient.some((m) =>
-    /(netflix|spotify|notion|chatgpt|claude|prime|youtube|icloud|figma|canva)/i.test(m.content)
-  );
+  // 🔥 STEP 2 — AUTO-CONTINUE LOGIC (NO USER INPUT REQUIRED)
+  if (assistantText && wantsAutoContinue(assistantText)) {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      temperature: 0.3,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...history,
+      ],
+    });
 
-  // Detect if answers to usage questions are present
-  const hasUsageAnswers = messagesFromClient.some((m) =>
-    /(daily|weekly|monthly|rarely)/i.test(m.content)
-  );
-
-  const hasImportance = messagesFromClient.some((m) =>
-    /(1|2|3|4|5)/.test(m.content)
-  );
-
-  const hasCountry = messagesFromClient.some((m) =>
-    /(india|usa|uk|europe|₹|\$|€)/i.test(m.content)
-  );
-
-  // PHASE DECISION LOGIC
-  if (!subsListed || !hasCountry) {
-    currentPhase = "phase0";
-  } else if (subsListed && (!hasUsageAnswers || !hasImportance)) {
-    currentPhase = "phase1";
-  } else {
-    currentPhase = "phase2";
+    return NextResponse.json({
+      role: "assistant",
+      content: completion.choices[0].message?.content || "Continuing...",
+    });
   }
 
-  let ragContext = "";
-  let webContext = "";
+  // 🔥 STEP 3 — DO RAG + SEARCH ONLY ON USER SUBSCRIPTION LIST (NOT ON EVERY TURN)
+  let rag: any = null;
+  let web: any = null;
 
-  // Only run RAG/web in PHASE 2
-  if (currentPhase === "phase2") {
-    const rag = await runRAG(lastUser?.content || "");
-    const web = await exaSearch(lastUser?.content || "");
+  const userJustListedSubs =
+    /netflix|spotify|notion|premium|subscription|₹|\$|mo|month/i.test(
+      latestUserContent
+    ) && history.length < 3;
 
-    ragContext = JSON.stringify(rag, null, 2);
-    webContext = JSON.stringify(web, null, 2);
+  if (userJustListedSubs) {
+    rag = await runRAG(latestUserContent);
+    web = await exaSearch(latestUserContent);
   }
 
-  const finalMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    {
-      role: "system",
-      content: SYSTEM_PROMPT + `\nCURRENT_PHASE: ${currentPhase}`
-    },
-    currentPhase === "phase2"
-      ? {
-          role: "system",
-          content: `RAG RESULTS:\n${ragContext}\n\nWEB RESULTS:\n${webContext}`
-        }
-      : { role: "system", content: "No RAG/Web context yet — still in interview (phase0/phase1)." },
-    ...messagesFromClient
+  const context = `RAG RESULTS:
+${JSON.stringify(rag, null, 2)}
+
+WEB SEARCH RESULTS:
+${JSON.stringify(web, null, 2)}
+`;
+
+  // 🔥 STEP 4 — BUILD FULL MESSAGE ARRAY
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_PROMPT },
   ];
 
+  if (userJustListedSubs) {
+    messages.push({ role: "system", content: context });
+  }
+
+  for (const m of history) {
+    messages.push({
+      role: m.role,
+      content: m.content,
+    });
+  }
+
+  // 🔥 STEP 5 — FORCE 1 QUESTION AT A TIME
+  if (assistantText && isQuestionTurn(assistantText)) {
+    messages.push({
+      role: "assistant",
+      content:
+        "Please answer the previous question so we can continue with the evaluation.",
+    });
+  }
+
+  // 🔥 STEP 6 — CALL OPENAI
   const completion = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
     temperature: 0.3,
-    messages: finalMessages
+    messages,
   });
 
-  const reply = completion.choices[0]?.message?.content || "Error.";
+  const text = completion.choices[0].message?.content || "No answer.";
 
-  return NextResponse.json({
-    role: "assistant",
-    content: reply,
-    phase: currentPhase
-  });
+  return NextResponse.json({ role: "assistant", content: text });
 }
