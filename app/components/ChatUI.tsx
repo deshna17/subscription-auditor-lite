@@ -15,6 +15,21 @@ type Message = {
   content: string;
 };
 
+function HealthBar({ score }: { score: number }) {
+  let color = "health-red";
+  if (score >= 80) color = "health-green";
+  else if (score >= 50) color = "health-yellow";
+
+  return (
+    <div className="health-bar">
+      <div
+        className={`health-fill ${color}`}
+        style={{ width: `${score}%` }}
+      ></div>
+    </div>
+  );
+}
+
 // Markdown Wrapper
 const Markdown: React.FC<{ children: string }> = ({ children }) => {
   return (
