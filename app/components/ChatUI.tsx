@@ -15,12 +15,11 @@ type Message = {
   content: string;
 };
 
-// Small helper so TypeScript chill rahe
+// Markdown Wrapper
 const Markdown: React.FC<{ children: string }> = ({ children }) => {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      // basic styling hooks for table / lists / headings
       components={
         {
           table: (props) => <table className="msg-table" {...props} />,
@@ -43,84 +42,100 @@ const Markdown: React.FC<{ children: string }> = ({ children }) => {
 };
 
 export default function ChatUI() {
+  // Chat history
   const [messages, setMessages] = useState<Message[]>([
-  {
-    role: "assistant",
-    content:
-      "Hi, I’m Subscription Auditor (Lite) 👋\n\n" +
-      "Paste or type your paid subscriptions with approx monthly prices.\n" +
-      "Example:\n" +
-      "- Netflix – ₹649/mo\n" +
-      "- Spotify – ₹119/mo\n" +
-      "- Notion – $8/mo\n" +
-      "- ChatGPT Plus – $20/mo\n\n" +
-      "Then I’ll ask 2–3 quick questions and show where you can save the most.",
-  },
-]);
+    {
+      role: "assistant",
+      content:
+        "Hi! I’m Subscription Auditor (Lite) 👋\n\n" +
+        "To begin, please list ONLY the names of your paid subscriptions (e.g., Netflix, Spotify, Notion).\n" +
+        "Also tell me your country/currency.\n\n" +
+        "After that, I will ask short usage questions one by one.",
+    },
+  ]);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll to bottom when messages change
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-async function sendMessage() {
-  const text = input.trim();
-  if (!text || loading) return;
+  // AUTO-CONTINUE HANDLER
+  useEffect(() => {
+    if (messages.length === 0) return;
 
-  const userMessage: Message = { role: "user", content: text };
-  const newMessages = [...messages, userMessage];
+    const last = messages[messages.length - 1];
 
-  setMessages(newMessages);
-  setInput("");
-  setLoading(true);
+    // Detect “give me a moment”
+    if (
+      last.role === "assistant" &&
+      /give me a moment|processing|one sec|hold on|let me prepare|let me think/i.test(
+        last.content
+      )
+    ) {
+      // Auto-send empty message to trigger next backend step
+      sendMessageInternal("");
+    }
+  }, [messages]);
 
-  try {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // 👇 send full history (without the assistant response yet)
-      body: JSON.stringify({ messages: newMessages }),
-    });
+  // ---- INTERNAL SEND (backend call) ----
+  async function sendMessageInternal(userMessage: string) {
+    const newHistory = [...messages];
 
-    if (!res.ok) {
-      throw new Error("API error");
+    if (userMessage.trim().length > 0) {
+      newHistory.push({ role: "user", content: userMessage });
+      setMessages(newHistory);
     }
 
-    const data: { role?: string; content?: string } = await res.json();
+    setLoading(true);
 
-    const assistantMessage: Message = {
-      role: "assistant",
-      content:
-        data.content ??
-        "Sorry, I couldn’t generate a response. Please try again.",
-    };
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          history: newHistory, // backend needs “history”
+          message: userMessage,
+        }),
+      });
 
-    setMessages((prev) => [...prev, assistantMessage]);
-  } catch (err) {
-    console.error("Chat error:", err);
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content:
-          "Sorry, something went wrong while talking to the model. Try again in a moment.",
-      },
-    ]);
-  } finally {
-    setLoading(false);
+      const data = await res.json();
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.content },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, something went wrong. Try again shortly.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
+  // ---- PUBLIC SEND (user triggered) ----
+  function sendMessage() {
+    if (!input.trim() || loading) return;
+    sendMessageInternal(input.trim());
+    setInput("");
+  }
+
+  // Submit handler
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     sendMessage();
   }
 
+  // Enter key behaviour
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Enter = send, Shift+Enter = newline
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -134,23 +149,12 @@ async function sendMessage() {
         <div>
           <h1>Subscription Auditor (Lite)</h1>
           <p className="subtitle">
-            Enter subscriptions or ask for cheaper / smarter AI alternatives.
+            Smart optimization for your digital subscriptions.
           </p>
         </div>
       </header>
 
       <div className="messages">
-        {messages.length === 0 && (
-          <div className="empty-state">
-            <p>Try asking things like:</p>
-            <ul>
-              <li>“Claude vs ChatGPT vs Gemini – best 3 for coding?”</li>
-              <li>“I pay for Notion, Canva and Figma – cheaper combo?”</li>
-              <li>“Best AI stack for travel planning on a budget.”</li>
-            </ul>
-          </div>
-        )}
-
         {messages.map((m, i) => (
           <div
             key={i}
@@ -160,11 +164,7 @@ async function sendMessage() {
               {m.role === "user" ? "You" : "AI"}
             </div>
             <div className="message-bubble">
-              {m.role === "assistant" ? (
-                <Markdown>{m.content}</Markdown>
-              ) : (
-                <Markdown>{m.content}</Markdown>
-              )}
+              <Markdown>{m.content}</Markdown>
             </div>
           </div>
         ))}
@@ -185,16 +185,15 @@ async function sendMessage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Describe your subscriptions or the AI use case you want to optimize…"
+          placeholder="Type your answer..."
         />
         <button type="submit" disabled={loading || !input.trim()}>
-          {loading ? "Sending…" : "Ask"}
+          {loading ? "Sending…" : "Send"}
         </button>
       </form>
 
       <p className="hint">
-        ↵ <strong>Enter</strong> to send,&nbsp;
-        <span>Shift + Enter</span> for a new line.
+        ↵ <strong>Enter</strong> to send, Shift+Enter for newline
       </p>
     </div>
   );
