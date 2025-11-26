@@ -8,10 +8,38 @@ import React, {
   KeyboardEvent,
 } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
+};
+
+// Small helper so TypeScript chill rahe
+const Markdown: React.FC<{ children: string }> = ({ children }) => {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      // basic styling hooks for table / lists / headings
+      components={
+        {
+          table: (props) => <table className="msg-table" {...props} />,
+          thead: (props) => <thead {...props} />,
+          tbody: (props) => <tbody {...props} />,
+          tr: (props) => <tr {...props} />,
+          th: (props) => <th className="msg-th" {...props} />,
+          td: (props) => <td className="msg-td" {...props} />,
+          p: (props) => <p className="msg-p" {...props} />,
+          ul: (props) => <ul className="msg-ul" {...props} />,
+          li: (props) => <li className="msg-li" {...props} />,
+          h2: (props) => <h2 className="msg-h2" {...props} />,
+          h3: (props) => <h3 className="msg-h3" {...props} />,
+        } as any
+      }
+    >
+      {children}
+    </ReactMarkdown>
+  );
 };
 
 export default function ChatUI() {
@@ -117,9 +145,9 @@ export default function ChatUI() {
             </div>
             <div className="message-bubble">
               {m.role === "assistant" ? (
-                <ReactMarkdown>{m.content}</ReactMarkdown>
+                <Markdown>{m.content}</Markdown>
               ) : (
-                m.content
+                <Markdown>{m.content}</Markdown>
               )}
             </div>
           </div>
