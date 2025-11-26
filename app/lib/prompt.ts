@@ -39,7 +39,7 @@ GLOBAL TABLE REQUIREMENTS:
 - NO long text in any cell (max 8–10 words).
 - NO wrapping, NO extra pipes.
 - NO paragraphs or long descriptions inside table cells.
-- NEVER output more than 3 data rows in any table.
+- The table can have as many rows as needed, but must stay readable.
 
 RECOMMENDATION TABLE MUST BE EXACTLY:
 
