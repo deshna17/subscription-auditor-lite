@@ -6,48 +6,61 @@ import { exaSearch } from "../../lib/search";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const user = body.message as string;
+  const body = await req.json();
 
-    if (!user || typeof user !== "string") {
-      return NextResponse.json(
-        { role: "assistant", content: "Please send a text message." },
-        { status: 400 }
-      );
+  // Full chat history sent from frontend
+  const history: ChatMessage[] | undefined = body.history;
+
+  // Latest user message content (for RAG/web search)
+  const latestUserContent: string =
+    history && history.length > 0
+      ? history[history.length - 1].content
+      : body.message;
+
+  // RAG + web search on latest user question / statement
+  const rag = await runRAG(latestUserContent);
+  const web = await exaSearch(latestUserContent);
+
+  const context = `
+RAG RESULTS:
+${JSON.stringify(rag, null, 2)}
+
+WEB SEARCH RESULTS:
+${JSON.stringify(web, null, 2)}
+`;
+
+  // Build message array for OpenAI
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: context },
+  ];
+
+  if (history && history.length > 0) {
+    // Attach full dialogue so far
+    for (const m of history) {
+      messages.push({
+        role: m.role,
+        content: m.content,
+      });
     }
-
-    const rag = await runRAG(user);
-    const web = await exaSearch(user);
-
-    const context = `RAG RESULTS:\n${JSON.stringify(
-      rag,
-      null,
-      2
-    )}\n\nWEB SEARCH RESULTS:\n${JSON.stringify(web, null, 2)}\n`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      temperature: 0.3,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "system", content: context },
-        { role: "user", content: user },
-      ],
-    });
-
-    const text = completion.choices[0].message?.content ?? "No answer.";
-
-    return NextResponse.json({ role: "assistant", content: text });
-  } catch (err) {
-    console.error("Error in /api/chat:", err);
-    return NextResponse.json(
-      {
-        role: "assistant",
-        content: "Server error while processing your request.",
-      },
-      { status: 500 }
-    );
+  } else {
+    // Fallback: only latest user input
+    messages.push({ role: "user", content: latestUserContent });
   }
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    temperature: 0.3,
+    messages,
+  });
+
+  const text = completion.choices[0].message?.content || "No answer.";
+
+  return NextResponse.json({ role: "assistant", content: text });
 }
