@@ -1,1 +1,12 @@
-
+name,category,price,summary,usp,alternatives,website
+Netflix,entertainment,6–20/mo,Streaming movies & TV,Large library,Prime Video;Disney+,https://netflix.com
+Spotify,music,0–10/mo,Music streaming,Best discovery,Apple Music;YouTube Music,https://spotify.com
+Adobe Photoshop,design,20–25/mo,Pro image editing,Industry standard,Affinity Photo;GIMP;Photopea,https://adobe.com
+Adobe Creative Cloud,design,55/mo,All Adobe tools,Complete suite,Canva Pro;Affinity Suite,https://adobe.com/creativecloud
+Canva Pro,design,13/mo,Template design,Easiest for non-designers,Adobe Express;VistaCreate,https://canva.com
+Notion,productivity,0–10/mo,Notes & docs,All-in-one workspace,Evernote;Coda,https://notion.so
+Evernote,productivity,8–11/mo,Notes & organization,Long-time notes leader,Notion;OneNote,https://evernote.com
+ChatGPT Plus,ai,20/mo,AI assistant,Strong reasoning,Claude;Gemini Advanced,https://chat.openai.com
+Grammarly,writing,12/mo,Writing assistant,Real-time suggestions,Wordtune;LanguageTool,https://grammarly.com
+Dropbox,cloud,10–20/mo,Cloud storage,Smooth sync,Google Drive;OneDrive,https://dropbox.com
+Google One,cloud,2–10/mo,Drive storage,Great for Android users,iCloud;Dropbox,https://one.google.com
