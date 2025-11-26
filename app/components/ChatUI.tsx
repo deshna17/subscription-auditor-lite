@@ -62,7 +62,7 @@ export default function ChatUI() {
     {
       role: "assistant",
       content:
-        "Hi! I’m Subscription Auditor (Lite) 👋\n\n" +
+        "Hi! I’m Kill Bill 👋\n\n" +
         "To begin, please list ONLY the names of your paid subscriptions (e.g., Netflix, Spotify, Notion).\n" +
         "Also tell me your country/currency.\n\n" +
         "After that, I will ask short usage questions one by one.",
@@ -162,7 +162,7 @@ export default function ChatUI() {
       <header className="chat-header">
         <div className="emoji">📋</div>
         <div>
-          <h1>Subscription Auditor (Lite)</h1>
+          <h1>Kill Bill</h1>
           <p className="subtitle">
             Smart optimization for your digital subscriptions.
           </p>
