@@ -28,7 +28,9 @@ body {
   margin: 0 auto;
 }
 
-/* Chat card */
+/* -------------------------
+   CHAT SHELL 
+-------------------------- */
 
 .chat-shell {
   background: rgba(15, 23, 42, 0.96);
@@ -67,7 +69,9 @@ body {
   background: radial-gradient(circle at 30% 0%, #f97316, #7c2d12);
 }
 
-/* Messages */
+/* -------------------------
+   MESSAGES
+-------------------------- */
 
 .messages {
   margin-top: 0.5rem;
@@ -102,7 +106,7 @@ body {
   border-radius: 0.9rem;
   background: rgba(15, 23, 42, 0.96);
   border: 1px solid rgba(148, 163, 184, 0.45);
-  white-space: pre-wrap; /* tables & newlines stay aligned */
+  white-space: pre-wrap;
 }
 
 .message.user .message-bubble {
@@ -120,7 +124,9 @@ body {
   color: #a5b4fc;
 }
 
-/* Empty state */
+/* -------------------------
+   EMPTY STATE
+-------------------------- */
 
 .empty-state {
   font-size: 0.9rem;
@@ -136,7 +142,9 @@ body {
   margin-bottom: 0.25rem;
 }
 
-/* Input row */
+/* -------------------------
+   INPUT ROW
+-------------------------- */
 
 .input-row {
   display: flex;
@@ -194,7 +202,6 @@ body {
 }
 
 /* Footer hint */
-
 .hint {
   margin-top: 0.4rem;
   font-size: 0.75rem;
@@ -205,3 +212,47 @@ body {
   font-weight: 500;
   color: #e5e7eb;
 }
+
+/* -------------------------
+   MARKDOWN + TABLE FORMATTING (NEW)
+-------------------------- */
+
+.message-bubble h3 {
+  margin: 0.2rem 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.message-bubble p {
+  margin: 0.2rem 0 0.4rem;
+}
+
+.message-bubble ul {
+  margin: 0.2rem 0 0.4rem 1.1rem;
+  padding-left: 0;
+}
+
+.message-bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0;
+  font-size: 0.85rem;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message-bubble th,
+.message-bubble td {
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+}
+
+.message-bubble th {
+  background: rgba(30, 64, 175, 0.3);
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
