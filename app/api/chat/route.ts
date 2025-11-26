@@ -6,6 +6,7 @@ import { exaSearch } from "../../lib/search";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+// Basic chat message structure
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -14,53 +15,60 @@ type ChatMessage = {
 export async function POST(req: Request) {
   const body = await req.json();
 
-  // Full chat history sent from frontend
-  const history: ChatMessage[] | undefined = body.history;
+  // The frontend must send: { messages: [...] }
+  const messagesFromClient: ChatMessage[] = body.messages || [];
 
-  // Latest user message content (for RAG/web search)
-  const latestUserContent: string =
-    history && history.length > 0
-      ? history[history.length - 1].content
-      : body.message;
+  // Extract the latest user message
+  const lastUserMsg =
+    [...messagesFromClient].reverse().find((m) => m.role === "user")?.content ||
+    "";
 
-  // RAG + web search on latest user question / statement
-  const rag = await runRAG(latestUserContent);
-  const web = await exaSearch(latestUserContent);
+  // Determine whether user has listed subscriptions yet
+  const userHasListedSubscriptions = messagesFromClient.some((m) =>
+    /(netflix|spotify|notion|chatgpt|prime|apple|dropbox|adobe|canva|figma|amazon|youtube)/i.test(
+      m.content
+    )
+  );
 
-  const context = `
-RAG RESULTS:
-${JSON.stringify(rag, null, 2)}
+  let ragContext = "";
+  let webContext = "";
 
-WEB SEARCH RESULTS:
-${JSON.stringify(web, null, 2)}
-`;
+  // 🔥 Only run RAG + Web Search AFTER user has listed subscriptions
+  if (userHasListedSubscriptions) {
+    const rag = await runRAG(lastUserMsg);
+    const web = await exaSearch(lastUserMsg);
 
-  // Build message array for OpenAI
-  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "system", content: context },
-  ];
-
-  if (history && history.length > 0) {
-    // Attach full dialogue so far
-    for (const m of history) {
-      messages.push({
-        role: m.role,
-        content: m.content,
-      });
-    }
-  } else {
-    // Fallback: only latest user input
-    messages.push({ role: "user", content: latestUserContent });
+    ragContext = JSON.stringify(rag, null, 2);
+    webContext = JSON.stringify(web, null, 2);
   }
 
+  // Build messages array for OpenAI
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+
+    // Inject RAG/Web only AFTER Phase-1
+    userHasListedSubscriptions
+      ? {
+          role: "system",
+          content: `RAG RESULTS:\n${ragContext}\n\nWEB RESULTS:\n${webContext}`,
+        }
+      : { role: "system", content: "No RAG or web context yet." },
+
+    // Add all user + assistant messages so far
+    ...messagesFromClient.map((m) => ({
+      role: m.role,
+      content: m.content,
+    })),
+  ];
+
+  // Call OpenAI
   const completion = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
     temperature: 0.3,
     messages,
   });
 
-  const text = completion.choices[0].message?.content || "No answer.";
+  const text = completion.choices[0]?.message?.content || "No response.";
 
   return NextResponse.json({ role: "assistant", content: text });
 }
