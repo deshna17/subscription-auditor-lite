@@ -66,25 +66,23 @@ export default function ChatUI() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  async function sendMessage() {
+async function sendMessage() {
   const text = input.trim();
   if (!text || loading) return;
 
   const userMessage: Message = { role: "user", content: text };
+  const newMessages = [...messages, userMessage];
 
-  // Update UI
-  setMessages((prev) => [...prev, userMessage]);
+  setMessages(newMessages);
   setInput("");
   setLoading(true);
 
   try {
-    // Send FULL history (including the just-added user message)
-    const historyToSend = [...messages, userMessage];
-
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ history: historyToSend }),
+      // 👇 send full history (without the assistant response yet)
+      body: JSON.stringify({ messages: newMessages }),
     });
 
     if (!res.ok) {
