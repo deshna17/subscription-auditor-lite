@@ -43,7 +43,20 @@ const Markdown: React.FC<{ children: string }> = ({ children }) => {
 };
 
 export default function ChatUI() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+  {
+    role: "assistant",
+    content:
+      "Hi, I’m Subscription Auditor (Lite) 👋\n\n" +
+      "Paste or type your paid subscriptions with approx monthly prices.\n" +
+      "Example:\n" +
+      "- Netflix – ₹649/mo\n" +
+      "- Spotify – ₹119/mo\n" +
+      "- Notion – $8/mo\n" +
+      "- ChatGPT Plus – $20/mo\n\n" +
+      "Then I’ll ask 2–3 quick questions and show where you can save the most.",
+  },
+]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -54,49 +67,54 @@ export default function ChatUI() {
   }, [messages, loading]);
 
   async function sendMessage() {
-    const text = input.trim();
-    if (!text || loading) return;
+  const text = input.trim();
+  if (!text || loading) return;
 
-    const userMessage: Message = { role: "user", content: text };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setLoading(true);
+  const userMessage: Message = { role: "user", content: text };
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-      });
+  // Update UI
+  setMessages((prev) => [...prev, userMessage]);
+  setInput("");
+  setLoading(true);
 
-      if (!res.ok) {
-        throw new Error("API error");
-      }
+  try {
+    // Send FULL history (including the just-added user message)
+    const historyToSend = [...messages, userMessage];
 
-      const data: { role?: string; content?: string } = await res.json();
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ history: historyToSend }),
+    });
 
-      const assistantMessage: Message = {
+    if (!res.ok) {
+      throw new Error("API error");
+    }
+
+    const data: { role?: string; content?: string } = await res.json();
+
+    const assistantMessage: Message = {
+      role: "assistant",
+      content:
+        data.content ??
+        "Sorry, I couldn’t generate a response. Please try again.",
+    };
+
+    setMessages((prev) => [...prev, assistantMessage]);
+  } catch (err) {
+    console.error("Chat error:", err);
+    setMessages((prev) => [
+      ...prev,
+      {
         role: "assistant",
         content:
-          data.content ??
-          "Sorry, I couldn’t generate a response. Please try again.",
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (err) {
-      console.error("Chat error:", err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, something went wrong while talking to the model. Try again in a moment.",
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
+          "Sorry, something went wrong while talking to the model. Try again in a moment.",
+      },
+    ]);
+  } finally {
+    setLoading(false);
   }
+}
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
