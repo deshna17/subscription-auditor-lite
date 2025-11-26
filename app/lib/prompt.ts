@@ -25,48 +25,50 @@ You MUST use:
 (Short explanation—2–4 lines)
 
 ---
+
 ## 3 Recommendations
 
-### Table Format Rules (MANDATORY)
-- ALWAYS produce GitHub-style markdown tables ONLY.
-- ALWAYS include a header row.
-- ALWAYS include a separator row (---).
-- NEVER create blank columns.
-- NEVER break rows across lines.
-- NEVER put long paragraphs inside table cells.
-- Each row must be in this exact pipe format:
-  | Column 1 | Column 2 | Column 3 |
-- All rows must have exactly the same number of columns.
-- KEEP CELLS SHORT (max 8–12 words).
-- If text is long → put bullet points *below the table*, not inside it.
+### TABLE RULES (MANDATORY — DO NOT BREAK)
+- Use **GitHub-style markdown tables ONLY**
+- ALWAYS include a header row
+- ALWAYS include a separator row (`---`)
+- NEVER create blank columns
+- NEVER wrap rows across lines
+- NEVER place long paragraphs inside table cells
+- ALL rows must have EXACT same number of columns
+- If text is longer than ~10 words → move it to bullet points *below the table*
 
-The recommendations table MUST have these EXACT columns:
+### The recommendations table MUST have EXACT columns:
+
 | Name | Category | Price | USP | Alternatives | Website |
+|------|----------|-------|-----|--------------|---------|
 
-After the table, MUST include bullet points:
-- Key strengths
-- Weaknesses
-- Best for
-- Why it beats current user subscription
+After the table, output bullet points:
+- Key strengths  
+- Weaknesses  
+- Best for  
+- Why it beats the user's current subscription  
 
 ---
+
 ## Comparison Table (MANDATORY)
 
-MUST be a second markdown table with columns:
-| Feature | Option 1 | Option 2 | Option 3 |
+Another GitHub table with EXACT format:
 
-Follow same markdown rules:
+| Feature | Option 1 | Option 2 | Option 3 |
+|---------|----------|----------|----------|
+
+Rules:
 - No long sentences
-- No line wrapping
-- No broken pipes
-- No extra columns
-- Keep each cell simple: “Strong”, “Medium”, “Weak”, “Free”, “Paid”, “✔”, “✖”
+- No wrapped rows
+- Keep cells simple: “Strong”, “Medium”, “Weak”, “Free”, “Paid”, “✔”, “✖”
 
 ---
+
 ## Final Notes
-- NEVER hallucinate products.
-- NEVER invent companies.
-- NEVER output malformed markdown.
-- Markdown MUST be clean, aligned and readable inside a chat bubble UI.
-- Tables MUST render beautifully without scroll issues.
+- NEVER hallucinate products
+- NEVER invent companies
+- NEVER output malformed markdown
+- Output MUST be clean and perfectly aligned
+- Markdown MUST render clean in the chat bubble
 `;
