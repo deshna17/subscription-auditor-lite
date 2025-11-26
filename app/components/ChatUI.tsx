@@ -7,6 +7,7 @@ import React, {
   FormEvent,
   KeyboardEvent,
 } from "react";
+import ReactMarkdown from "react-markdown";
 
 type Message = {
   role: "user" | "assistant";
@@ -114,7 +115,13 @@ export default function ChatUI() {
             <div className="message-role">
               {m.role === "user" ? "You" : "AI"}
             </div>
-            <div className="message-bubble">{m.content}</div>
+            <div className="message-bubble">
+              {m.role === "assistant" ? (
+                <ReactMarkdown>{m.content}</ReactMarkdown>
+              ) : (
+                m.content
+              )}
+            </div>
           </div>
         ))}
 
