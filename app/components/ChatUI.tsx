@@ -164,7 +164,7 @@ export default function ChatUI() {
         <div>
           <h1>Kill Bill</h1>
           <p className="subtitle">
-            Smart optimization for your digital subscriptions.
+            The smartest way to kill your bills!
           </p>
         </div>
       </header>
