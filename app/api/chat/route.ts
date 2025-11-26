@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { SYSTEM_PROMPT } from "@/app/lib/prompt";
-import { runRAG } from "@/app/lib/rag";
-import { exaSearch } from "@/app/lib/search";
+import { SYSTEM_PROMPT } from "../../../lib/prompt";
+import { runRAG } from "../../../lib/rag";
+import { exaSearch } from "../../../lib/search";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
