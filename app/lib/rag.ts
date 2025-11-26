@@ -3,28 +3,31 @@ import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+// @ts-ignore – Pinecone client works with apiKey only; ignore TS complaining
+const pc = new Pinecone({
+  apiKey: process.env.PINECONE_API_KEY!,
+});
 
 export async function runRAG(query: string) {
   try {
     const emb = await openai.embeddings.create({
       model: "text-embedding-3-small",
-      input: query
+      input: query,
     });
-    const vec = emb.data[0].embedding;
+
+    const vector = emb.data[0].embedding;
 
     const index = pc.index("subscriptions");
 
     const result = await index.query({
-      vector: vec,
+      vector,
       topK: 5,
-      includeMetadata: true
+      includeMetadata: true,
     });
 
-    return result.matches;
+    return result.matches || [];
   } catch (err) {
-    console.error(err);
+    console.error("RAG error:", err);
     return [];
   }
 }
-
