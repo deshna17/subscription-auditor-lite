@@ -179,7 +179,13 @@ export default function ChatUI() {
               {m.role === "user" ? "You" : "AI"}
             </div>
             <div className="message-bubble">
-              <Markdown>{m.content}</Markdown>
+               <>
+                {/* Detect health score pattern like "Financial Health Score: 62" */}
+                {m.content.match(/Financial Health Score: (\d+)/i) && (
+                  <HealthBar score={Number(m.content.match(/Financial Health Score: (\d+)/i)?.[1])} />
+                )}
+                <Markdown>{m.content}</Markdown>
+              </>
             </div>
           </div>
         ))}
