@@ -1,70 +1,150 @@
 "use client";
-import { useState } from "react";
+
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  FormEvent,
+  KeyboardEvent,
+} from "react";
+
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
 
 export default function ChatUI() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
-    const userMsg = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMsg]);
-    const text = input;
+  async function sendMessage() {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const userMessage: Message = { role: "user", content: text };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ message: text })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
       });
-      const data = await res.json();
-      setMessages((prev) => [...prev, data]);
+
+      if (!res.ok) {
+        throw new Error("API error");
+      }
+
+      const data: { role?: string; content?: string } = await res.json();
+
+      const assistantMessage: Message = {
+        role: "assistant",
+        content:
+          data.content ??
+          "Sorry, I couldn’t generate a response. Please try again.",
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
+      console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Error contacting AI." }
+        {
+          role: "assistant",
+          content:
+            "Sorry, something went wrong while talking to the model. Try again in a moment.",
+        },
       ]);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    setLoading(false);
-  };
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    sendMessage();
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    // Enter = send, Shift+Enter = newline
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
 
   return (
-    <>
-      <div className="header">
-        <div className="header-title">💳 Subscription Auditor (Lite)</div>
-        <div className="header-subtitle">
-          Enter subscriptions or ask for cheaper alternatives.
+    <div className="chat-shell">
+      <header className="chat-header">
+        <div className="emoji">📋</div>
+        <div>
+          <h1>Subscription Auditor (Lite)</h1>
+          <p className="subtitle">
+            Enter subscriptions or ask for cheaper / smarter AI alternatives.
+          </p>
         </div>
-      </div>
+      </header>
 
-      <div className="chat-window">
+      <div className="messages">
+        {messages.length === 0 && (
+          <div className="empty-state">
+            <p>Try asking things like:</p>
+            <ul>
+              <li>“Claude vs ChatGPT vs Gemini – best 3 for coding?”</li>
+              <li>“I pay for Notion, Canva and Figma – cheaper combo?”</li>
+              <li>“Best AI stack for travel planning on a budget.”</li>
+            </ul>
+          </div>
+        )}
+
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`msg ${m.role === "user" ? "msg-user" : "msg-ai"}`}
+            className={`message ${m.role === "user" ? "user" : "assistant"}`}
           >
-            <strong>{m.role === "user" ? "You" : "AI"}:</strong>{" "}
-            <span dangerouslySetInnerHTML={{ __html: m.content }} />
+            <div className="message-role">
+              {m.role === "user" ? "You" : "AI"}
+            </div>
+            <div className="message-bubble">{m.content}</div>
           </div>
         ))}
+
+        {loading && (
+          <div className="message assistant">
+            <div className="message-role">AI</div>
+            <div className="message-bubble typing">Thinking…</div>
+          </div>
+        )}
+
+        <div ref={bottomRef} />
       </div>
 
-      <div className="chat-input-row">
-        <input
-          className="chat-input"
-          placeholder="Type your subscriptions…"
+      <form onSubmit={handleSubmit} className="input-row">
+        <textarea
+          rows={2}
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Describe your subscriptions or the AI use case you want to optimize…"
         />
-        <button className="chat-button" onClick={sendMessage} disabled={loading}>
-          {loading ? "..." : "Send"}
+        <button type="submit" disabled={loading || !input.trim()}>
+          {loading ? "Sending…" : "Ask"}
         </button>
-      </div>
-    </>
+      </form>
+
+      <p className="hint">
+        ↵ <strong>Enter</strong> to send,&nbsp;
+        <span>Shift + Enter</span> for a new line.
+      </p>
+    </div>
   );
 }
-
